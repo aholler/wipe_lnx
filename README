@@ -1,0 +1,194 @@
+
+wipe_lnx
+
+An attempt to implement a Linux in-kernel API to delete files (their contents)
+in a more secure way.
+
+(C) 2015 Alexander Holler
+
+See the file COPYING for the license (it's GPL v2 like the Linux kernel).
+
+
+WARNING: This doesn't offer military levels of security, it doesn't even
+offer the promise that it will wipe anything at all. But it's still better
+than anything the Linux kernel provides for that purpose today.
+Which is, by the way. why I've did it at all. Something, even if it's
+imperfect, is still better than nothing at all. At least in regard to the
+topic in question.
+And be furthermore warned, the time I've used to test was almost zero. But
+the patches are that small, that you easily can look at them yourself,
+without spending much time, to see if the patches might do any harm.
+
+
+How it works:
+
+It works somehow like shred(1) and tries to overwrite the current contents
+of a file while (after) deleting it. Important is the word "current".
+
+To keep the implementation simple, it uses the already existent discard
+mechanism of many filesystem implementations to overwrite the freed blocks
+a file has occupied. The work people already have spend to implement the
+discard feature is what this approach made really simple.
+
+Furthermore it doesn't just wipe the blocks which were part of the file in
+question, but it uses a filesystem-wide switch to enforce wiping of all
+freed blocks while the wipe-operation for one file is going on. In other
+words, if you delete a file the normal way while you are deleting a file in
+the more secure way, parts of the file deleted normally might be deleted more
+securely too. This might look crude in your eyes, but in my eyes this is the
+pure elegance which reduces the implementation to a few lines. It doesn't do
+any harm besides a filesystem-wide i/o slowdown while a file is deleted in a
+more secure way, which is rare action.
+
+
+Usage:
+
+Up to know I've only working kernel patches for (v)FAT and ext4. I already
+had a look at BTRFS, but it's discard mechanism currently don't appear to
+discard all copies of a file it stored.
+
+
+After you've applied the kernel-patches. just call
+
+wipe_linux filename
+
+to try to delete a file named filename in a more secure way than rm.
+The worst what might happen is, to my knowledge, that the file is deleted
+in the same way as when using rm.
+
+I've also made a patch for coreutils to add the switch -w to rm. Feel free
+to use it.
+
+
+Implementation problems:
+
+Many. I don't know if, when and how I will find the time to improve the
+patches I'm offering here. I'm not a filesystem developer and never had
+looked before at the Linux filesystem sources. I did the stuff I offer
+here merely out of desperation and as a proof of concept, also it already
+works and doesn't do any harm (at least to my knowledge).
+
+Some of the problems the implementation has are:
+- If a file is already in use, it might not be overwritten but just
+  deleted the usual way. This is a todo, I have to look up how to schedule
+  the "wipe"-flag too, if the deletion of an inode is scheduled.
+- It currently doesn't work for directories. The in-kernel rmdir() has to be
+  modified for that too.
+- It does not use "Secure trim" if available. Also this feature is currently
+  not very common (besides as part of eMMCs), it's preferable instead
+  of the normal trim operation many flashed based storage devices are
+  offering today.
+
+
+Left problems (just some of them):
+
+- If the file was modified in the past, there might be various parts of
+  it still lying around in some unused space of the storage. An attempt
+  to get rid of them might be to use fstrim(8) (part of util-linux) or
+  tools like wipefreespace (http://wipefreespace.sourceforge.net/).
+- Some parts of the file might be found in the swap. So you might want to
+  use swapoff(8) and some tool (e.g. dd) to wipe the used swap partition
+  (if swap was on a partition at all).
+- The bad block managment of some drives might have moved or hidden parts
+  of the file to an unreachable part of the disk. You might have to destroy
+  the disk or similiar.
+- Flashed based devices with controllers might still contain parts of
+  of the file in unused but not cleared blocks. Try fstrim --secure. Some SSDs
+  do support a secure erase too. Look at hdparm(8).
+- Some filesystems might have stored parts of the file in blocks which might be
+  shared with other files or metadatas. You might have to destroy the complete
+  partition or disk if the filesystem in question doesn't offer another way to
+  get rid of previous contents of a file.
+- Snapshots: It's almost obvious, but if you have snapshots or other forms of
+  backups, you have to look how to get rid of the file (or the complete backup)
+  yourself.
+
+
+Alternatives:
+
+- The best alternative is to not store sensitive information on electronic
+  devices at all.
+- Encryption. This is what many people are using and nowadays many people
+  are suggesting. But it has it's own problems. Encryption might suffer
+  under bugs in the implementation, under bugs (or even backdoors) in the
+  design, the necessary key-handling, and last but not least, Moore.
+  Taking all that into account, I would say encryption offers very nice
+  additional security, but it's impossible to foresee how long the used
+  encryption will be secure (in my humble opinion). So if you delete a file
+  today by just throwing away the key used to encrypt the file, someone might
+  be be able tommorow to recover it. Maybe because the key was generated
+  in a weak way, maybe because a bug in the implementation was found, or
+  just because someone got a working quantum computer which might be
+  able to easily brutforce the key.
+  Another problem of encryption is, that it only helps if the encrypted
+  stuff really is encrypted and the key isn't accessible. If, for example,
+  you have encrypted your home partition and you delete a file there, its
+  deleted contents might be still accessible while your home partition is
+  decrypted, which likely is all the time your machine runs. So even when
+  you use encryption, you still might want something which really deletes
+  a file even it's inside an encrypted container.
+- various other tools like shred(8)
+- various ways of securely formatting a disk (see above).
+- A very, very hot oven to burn the device/chip/storage in question.
+- Brute force to destroy the device/chip/storage in question.
+
+
+Why in-kernel?
+
+Because the filesystem is the only part which does know where on storage
+it has stored the parts of a file. Userspace tools like shred(8) have to
+make various assumptions about the filesystem, its features, its current
+implementation and the storage. They should not have to do so and having
+them to do so might end up in various wrong assumptions finally leading
+to failures in wiping a file.
+
+
+History:
+
+After I've got a bit angry, that, after around 30 years of IT I took part,
+there is still no way to (try to) really delete a file, I've tried to change
+that at least for Linux. Unfortunately, but not unexpected, it ended in a
+complete disaster.
+
+If you are interessted or you are bored:
+
+- The thread where I've got angry:
+  https://lkml.org/lkml/2015/1/22/799
+
+- Two bugs I've filed afterwards:
+  https://bugzilla.kernel.org/show_bug.cgi?id=92261 (btrfs)
+  https://bugzilla.kernel.org/show_bug.cgi?id=92271 (ext4)
+
+- The disaster:
+  https://lkml.org/lkml/2015/2/2/495
+
+
+Name:
+
+The name is pretty obvious. But if you ask yourself if I had a second
+meaning in mind, yes I did.
+This wasn't my first contact with Linux kernel maintainers and kernel
+developers. And I've finally come to the conclusion that it has become
+impossible to discuss with them, like you are used to do with normal people,
+in order to change anything in Linux. It is most often a total waste of
+time which might end up in a total needless and unwanted public flame-war
+during which you even might have to defend yourself against kids suffering
+under the Dunning-Kruger effect. Entering an area full with bored
+Velociraptors which do like to hunt in groups (at least according to a well
+known movie) must feel the same.
+And keep in mind that very big companies with very large human and
+monetary resources are regularily failing in discussing with kernel
+maintainers too.
+One has to wonder where all these changes still are coming from which let
+Linux look tomorrow totally different than today (which is another problem
+it suffers from).
+To conclude, if you see the possibility to switch to another OS, or if you
+are deciding what OS you use for a new project, I suggest to keep away from
+Linux, if possible.
+Fortunately there are still alternatives around. Unfortunately these are
+becoming more and more seldom. To name some of them (in no special order):
+FreeBSD, OpenBSD, L4-kernels, mbed, ecos, FreeRTOS, ...
+
+BUGS:
+
+Countless.

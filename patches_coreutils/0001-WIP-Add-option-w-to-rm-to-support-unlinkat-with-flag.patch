@@ -1,0 +1,116 @@
+From 4c5abe3c4127c5bb09260e6743317715a809e41f Mon Sep 17 00:00:00 2001
+From: Alexander Holler <holler@ahsoftware.de>
+Date: Mon, 2 Feb 2015 16:59:24 +0100
+Subject: [PATCH] WIP: Add option -w to rm to support unlinkat() with flag
+ AT_WIPE
+
+Signed-off-by: Alexander Holler <holler@ahsoftware.de>
+---
+ src/mv.c     |  1 +
+ src/remove.c |  6 ++++++
+ src/remove.h |  3 +++
+ src/rm.c     | 10 +++++++++-
+ 4 files changed, 19 insertions(+), 1 deletion(-)
+
+diff --git a/src/mv.c b/src/mv.c
+index 0bcc1bb..e3a5fa8 100644
+--- a/src/mv.c
++++ b/src/mv.c
+@@ -76,6 +76,7 @@ rm_option_init (struct rm_options *x)
+   x->ignore_missing_files = false;
+   x->remove_empty_directories = true;
+   x->recursive = true;
++  x->wipe = false;
+   x->one_file_system = false;
+ 
+   /* Should we prompt for removal, too?  No.  Prompting for the 'move'
+diff --git a/src/remove.c b/src/remove.c
+index db8f993..554320c 100644
+--- a/src/remove.c
++++ b/src/remove.c
+@@ -360,6 +360,10 @@ mark_ancestor_dirs (FTSENT *ent)
+     }
+ }
+ 
++#ifndef AT_WIPE
++  #define AT_WIPE 0x8000
++#endif
++
+ /* Remove the file system object specified by ENT.  IS_DIR specifies
+    whether it is expected to be a directory or non-directory.
+    Return RM_OK upon success, else RM_ERROR.  */
+@@ -367,6 +371,8 @@ static enum RM_status
+ excise (FTS *fts, FTSENT *ent, struct rm_options const *x, bool is_dir)
+ {
+   int flag = is_dir ? AT_REMOVEDIR : 0;
++  if (x->wipe)
++    flag |= AT_WIPE;
+   if (unlinkat (fts->fts_cwd_fd, ent->fts_accpath, flag) == 0)
+     {
+       if (x->verbose)
+diff --git a/src/remove.h b/src/remove.h
+index a450192..f64cbd9 100644
+--- a/src/remove.h
++++ b/src/remove.h
+@@ -49,6 +49,9 @@ struct rm_options
+   /* If true, recursively remove directories.  */
+   bool recursive;
+ 
++  /* If true, use unlinkat() with flag AT_WIPE */
++  bool wipe;
++
+   /* If true, remove empty directories.  */
+   bool remove_empty_directories;
+ 
+diff --git a/src/rm.c b/src/rm.c
+index c1a23d5..b83ef69 100644
+--- a/src/rm.c
++++ b/src/rm.c
+@@ -77,6 +77,7 @@ static struct option const long_opts[] =
+   {"-presume-input-tty", no_argument, NULL, PRESUME_INPUT_TTY_OPTION},
+ 
+   {"recursive", no_argument, NULL, 'r'},
++  {"wipe", no_argument, NULL, 'w'},
+   {"dir", no_argument, NULL, 'd'},
+   {"verbose", no_argument, NULL, 'v'},
+   {GETOPT_HELP_OPTION_DECL},
+@@ -155,6 +156,8 @@ Remove (unlink) the FILE(s).\n\
+       --no-preserve-root  do not treat '/' specially\n\
+       --preserve-root   do not remove '/' (default)\n\
+   -r, -R, --recursive   remove directories and their contents recursively\n\
++  -w, --wipe            instruct the FS to try to wipe the contents (use\n\
++                           unlinkat() with flag AT_WIPE)\n\
+   -d, --dir             remove empty directories\n\
+   -v, --verbose         explain what is being done\n\
+ "), stdout);
+@@ -193,6 +196,7 @@ rm_option_init (struct rm_options *x)
+   x->one_file_system = false;
+   x->remove_empty_directories = false;
+   x->recursive = false;
++  x->wipe = false;
+   x->root_dev_ino = NULL;
+   x->stdin_tty = isatty (STDIN_FILENO);
+   x->verbose = false;
+@@ -223,7 +227,7 @@ main (int argc, char **argv)
+   /* Try to disable the ability to unlink a directory.  */
+   priv_set_remove_linkdir ();
+ 
+-  while ((c = getopt_long (argc, argv, "dfirvIR", long_opts, NULL)) != -1)
++  while ((c = getopt_long (argc, argv, "dfirvwIR", long_opts, NULL)) != -1)
+     {
+       switch (c)
+         {
+@@ -254,6 +258,10 @@ main (int argc, char **argv)
+           x.recursive = true;
+           break;
+ 
++        case 'w':
++          x.wipe = true;
++          break;
++
+         case INTERACTIVE_OPTION:
+           {
+             int i;
+-- 
+2.0.5
+
