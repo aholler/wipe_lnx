@@ -45,7 +45,7 @@ Usage:
 
 Up to now I've only working kernel patches for (v)FAT and ext4 (usable for
 ext2 and ext3 too with CONFIG_EXT4_USE_FOR_EXT23=y). I already had a look
-at BTRFS, but it's discard mechanism currently don't appear to discard all
+at BTRFS, but its discard mechanism currently don't appear to discard all
 copies of a file it stored.
 
 
@@ -191,6 +191,11 @@ Linux, if possible.
 Fortunately there are still alternatives around. Unfortunately these are
 becoming more and more seldom. To name some of them (in no special order):
 FreeBSD, OpenBSD, L4-kernels, mbed, ecos, FreeRTOS, ...
+Please don't get me wrong. I still like to use Linux, I like many of its
+features and I'm fully aware of all its advantages. But I learned to
+dislike how the community around it has changed and I'm a bit afraid
+that many good and usable alternatives are now dying because now everyone
+seems to prefer Linux for everything.
 
 BUGS:
 
