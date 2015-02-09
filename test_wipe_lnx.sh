@@ -2,6 +2,8 @@
 
 FS=ext4
 #FS=vfat
+#FS=ext3 # needs CONFIG_EXT4_USE_FOR_EXT23=y
+#FS=ext2 # needs CONFIG_EXT4_USE_FOR_EXT23=y
 
 if [ "$(whoami)" != "root" ]; then
 	echo "Need root"
