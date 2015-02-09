@@ -12,7 +12,7 @@ See the file COPYING for the license (it's GPL v2 like the Linux kernel).
 WARNING: This doesn't offer military levels of security, it doesn't even
 offer the promise that it will wipe anything at all. But it's still better
 than anything the Linux kernel provides for that purpose today.
-Which is, by the way. why I've did it at all. Something, even if it's
+Which is, by the way, why I've did it at all. Something, even if it's
 imperfect, is still better than nothing at all. At least in regard to the
 topic in question.
 And be furthermore warned, the time I've used to test was almost zero. But
@@ -43,9 +43,10 @@ more secure way, which is rare action.
 
 Usage:
 
-Up to know I've only working kernel patches for (v)FAT and ext4. I already
-had a look at BTRFS, but it's discard mechanism currently don't appear to
-discard all copies of a file it stored.
+Up to now I've only working kernel patches for (v)FAT and ext4 (usable for
+ext2 and ext3 too with CONFIG_EXT4_USE_FOR_EXT23=y). I already had a look
+at BTRFS, but it's discard mechanism currently don't appear to discard all
+copies of a file it stored.
 
 
 After you've applied the kernel-patches. just call
@@ -56,8 +57,10 @@ to try to delete a file named filename in a more secure way than rm.
 The worst what might happen is, to my knowledge, that the file is deleted
 in the same way as when using rm.
 
-I've also made a patch for coreutils to add the switch -w to rm. Feel free
-to use it.
+I've also made a patch for coreutils to add the switch -w to rm. This is
+the preferable way to use this functionality, because wipe_lnx.c is just
+quick & dirty solution done in around 10 minutes to test the kernel
+patches without the need for a patched version of "rm" from coreutils.
 
 
 Implementation problems:
