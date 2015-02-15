@@ -1,0 +1,30 @@
+From 4e9d304abe63041b15eac34c34178fb92af7924d Mon Sep 17 00:00:00 2001
+From: Alexander Holler <holler@ahsoftware.de>
+Date: Tue, 27 Jan 2015 03:02:32 +0100
+Subject: [PATCH] mmc: print message if a card supports secure erase/trim
+
+It's an interesting detail, so inform the user about it.
+
+Signed-off-by: Alexander Holler <holler@ahsoftware.de>
+---
+ drivers/mmc/core/bus.c | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/drivers/mmc/core/bus.c b/drivers/mmc/core/bus.c
+index 86d2711..666598d 100644
+--- a/drivers/mmc/core/bus.c
++++ b/drivers/mmc/core/bus.c
+@@ -316,6 +316,10 @@ int mmc_add_card(struct mmc_card *card)
+ 			uhs_bus_speed_mode, type, card->rca);
+ 	}
+ 
++	if (mmc_can_secure_erase_trim(card))
++		pr_info("%s: card supports secure erase/trim\n",
++			mmc_hostname(card->host));
++
+ #ifdef CONFIG_DEBUG_FS
+ 	mmc_add_card_debugfs(card);
+ #endif
+-- 
+2.0.5
+
