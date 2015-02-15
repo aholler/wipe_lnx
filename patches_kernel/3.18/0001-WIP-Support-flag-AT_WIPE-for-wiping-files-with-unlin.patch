@@ -1,7 +1,7 @@
-From a81f8cf8a1e0b576c885dedaf74cf0a595d83308 Mon Sep 17 00:00:00 2001
+From 0fa599c478a699f42291e9b37c7bfc46087c832d Mon Sep 17 00:00:00 2001
 From: Alexander Holler <holler@ahsoftware.de>
 Date: Mon, 2 Feb 2015 18:05:09 +0100
-Subject: [PATCH 1/3] WIP: Support flag AT_WIPE for wiping files with
+Subject: [PATCH 1/4] WIP: Support flag AT_WIPE for wiping files with
  unlinkat()
 
 Someone might want to really delete a file.
@@ -106,5 +106,5 @@ index beed138..e611b5b 100644
  
  #endif /* _UAPI_LINUX_FCNTL_H */
 -- 
-2.1.0
+2.0.5
 

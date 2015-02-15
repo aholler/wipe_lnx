@@ -1,15 +1,15 @@
-From d4c51157e58e6286b56fc0a9c63301de4baa1a69 Mon Sep 17 00:00:00 2001
+From 03e71e4666e5d4712a6942a9a3b2eeee5fc70d94 Mon Sep 17 00:00:00 2001
 From: Alexander Holler <holler@ahsoftware.de>
 Date: Mon, 2 Feb 2015 18:05:10 +0100
-Subject: [PATCH 2/3] WIP: fs: fat: support unlinkat() with flag AT_WIPE to
+Subject: [PATCH 3/4] WIP: fs: fat: support unlinkat() with flag AT_WIPE to
  wipe files
 
 Signed-off-by: Alexander Holler <holler@ahsoftware.de>
 ---
  fs/fat/fat.h    |  1 +
- fs/fat/fatent.c | 20 ++++++++++++++++++++
+ fs/fat/fatent.c | 17 ++++++++++++++++-
  fs/fat/inode.c  | 13 +++++++++++++
- 3 files changed, 34 insertions(+)
+ 3 files changed, 30 insertions(+), 1 deletion(-)
 
 diff --git a/fs/fat/fat.h b/fs/fat/fat.h
 index 64e295e..2a8a676 100644
@@ -24,43 +24,33 @@ index 64e295e..2a8a676 100644
  	struct nls_table *nls_disk;   /* Codepage used on disk */
  	struct nls_table *nls_io;     /* Charset used for input and display */
 diff --git a/fs/fat/fatent.c b/fs/fat/fatent.c
-index 260705c..a23e486 100644
+index 260705c..ef3dece 100644
 --- a/fs/fat/fatent.c
 +++ b/fs/fat/fatent.c
-@@ -575,6 +575,10 @@ int fat_free_clusters(struct inode *inode, int cluster)
+@@ -575,7 +575,22 @@ int fat_free_clusters(struct inode *inode, int cluster)
  			goto error;
  		}
  
-+		// TODO:
-+		// if (atomic_read(&sbi->wipe) && secure_trim_available)
-+		// 	use secure trim
-+		// else
- 		if (sbi->options.discard) {
- 			/*
- 			 * Issue discard for the sectors we no longer
-@@ -591,6 +595,22 @@ int fat_free_clusters(struct inode *inode, int cluster)
- 
- 				first_cl = cluster;
- 			}
-+		} else if (atomic_read(&sbi->wipe)) {
+-		if (sbi->options.discard) {
++		if (atomic_read(&sbi->wipe)) {
 +			/*
-+			 * Fill blocks with zero for the sectors we no
-+			 * longer care about, batching contiguous clusters
-+			 * into one request.
++			 * Wipe sectors we no longer care about, batching
++			 * contiguous clusters into one request.
 +			 */
 +			if (cluster != fatent.entry + 1) {
 +				int nr_clus = fatent.entry - first_cl + 1;
 +
-+				sb_issue_zeroout(sb,
++				sb_issue_wipe(sb,
 +					fat_clus_to_blknr(sbi, first_cl),
 +					nr_clus * sbi->sec_per_clus,
 +					GFP_NOFS);
 +
 +				first_cl = cluster;
 +			}
- 		}
- 
- 		ops->ent_put(&fatent, FAT_ENT_FREE);
++		} else if (sbi->options.discard) {
+ 			/*
+ 			 * Issue discard for the sectors we no longer
+ 			 * care about, batching contiguous clusters
 diff --git a/fs/fat/inode.c b/fs/fat/inode.c
 index 7b41a2d..f06c813 100644
 --- a/fs/fat/inode.c
@@ -100,5 +90,5 @@ index 7b41a2d..f06c813 100644
  	sb->s_maxbytes = 0xffffffff;
  
 -- 
-2.1.0
+2.0.5
 
