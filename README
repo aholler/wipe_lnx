@@ -25,6 +25,24 @@ How it works:
 It works somehow like shred(1) and tries to overwrite the current contents
 of a file while (after) deleting it. Important is the word "current".
 
+Blocks (sectors) the filesystem has freed during the wipe operation are
+made unreadable (hopefully) by the following algorithm:
+
+- if "secure trim" is supported, use this to free sectors,
+- else if "trim" is supported, use this to free sectors,
+- else overwrite the blocks with zero (once).
+
+The assumption here is that on modern flash based storage which does support
+"trim" but not "secure trim", it is still better to use "trim" than to
+overwrite freed blocks. The reasoning is that in order to reuse these blocks,
+the storage has to clear them anyway (which hopefully already happens during
+the call of "trim").
+
+If you ask if overwriting once with zero is enough on traditional storage
+(nowadays often called spinning rust), you might want to read
+"Overwriting Hard Drive Data: The Great Wiping Controversy":
+http://link.springer.com/chapter/10.1007/978-3-540-89862-7_21
+
 To keep the implementation simple, it uses the already existent discard
 mechanism of many filesystem implementations to overwrite the freed blocks
 a file has occupied. The work people already have spend to implement the
