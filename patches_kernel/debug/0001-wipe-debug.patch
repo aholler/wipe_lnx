@@ -1,0 +1,37 @@
+From 814ef3edf90ee2b724b88d09d6bdbb0c99c7e552 Mon Sep 17 00:00:00 2001
+From: Alexander Holler <holler@ahsoftware.de>
+Date: Mon, 16 Feb 2015 19:30:05 +0100
+Subject: [PATCH] wipe: debug
+
+---
+ block/blk-lib.c | 9 +++++++--
+ 1 file changed, 7 insertions(+), 2 deletions(-)
+
+diff --git a/block/blk-lib.c b/block/blk-lib.c
+index 579c644..4c77b18 100644
+--- a/block/blk-lib.c
++++ b/block/blk-lib.c
+@@ -148,13 +148,18 @@ int blkdev_issue_wipe(struct block_device *bdev, sector_t sector,
+ 	/* First try "secure trim" */
+ 	int rc = blkdev_issue_discard(bdev, sector, nr_sects, gfp_mask,
+ 					BLKDEV_DISCARD_SECURE);
+-	if (rc != -EOPNOTSUPP)
++	if (rc != -EOPNOTSUPP) {
++		pr_info("wipe: secure trim rc %d\n", rc);
+ 		return rc;
++	}
+ 	/* then try a normal trim */
+ 	rc = blkdev_issue_discard(bdev, sector, nr_sects, gfp_mask, 0);
+-	if (rc != -EOPNOTSUPP)
++	if (rc != -EOPNOTSUPP) {
++		pr_info("wipe: trim rc %d\n", rc);
+ 		return rc;
++	}
+ 	/* no support for trim, just overwrite the sectors */
++	pr_info("wipe: zeroout\n");
+ 	return blkdev_issue_zeroout(bdev, sector, nr_sects, gfp_mask);
+ }
+ EXPORT_SYMBOL(blkdev_issue_wipe);
+-- 
+2.0.5
+
