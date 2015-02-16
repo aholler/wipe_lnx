@@ -1,4 +1,4 @@
-From 704b2961484a1acb7501652df08e9de49e559ab0 Mon Sep 17 00:00:00 2001
+From 2732b4a20c6ea2d00d090f2580a38cb51b508850 Mon Sep 17 00:00:00 2001
 From: Alexander Holler <holler@ahsoftware.de>
 Date: Mon, 2 Feb 2015 18:05:09 +0100
 Subject: [PATCH 1/4] WIP: Support flag AT_WIPE for wiping files with
@@ -8,13 +8,13 @@ Someone might want to really delete a file.
 
 Signed-off-by: Alexander Holler <holler@ahsoftware.de>
 ---
- fs/namei.c                 | 34 ++++++++++++++++++++++++++++------
+ fs/namei.c                 | 36 ++++++++++++++++++++++++++++++------
  include/linux/fs.h         |  1 +
  include/uapi/linux/fcntl.h |  1 +
- 3 files changed, 30 insertions(+), 6 deletions(-)
+ 3 files changed, 32 insertions(+), 6 deletions(-)
 
 diff --git a/fs/namei.c b/fs/namei.c
-index bc35b02..8cf018c 100644
+index bc35b02..a5124fe 100644
 --- a/fs/namei.c
 +++ b/fs/namei.c
 @@ -3721,7 +3721,7 @@ EXPORT_SYMBOL(vfs_unlink);
@@ -26,7 +26,7 @@ index bc35b02..8cf018c 100644
  {
  	int error;
  	struct filename *name;
-@@ -3763,8 +3763,25 @@ exit2:
+@@ -3763,8 +3763,27 @@ exit2:
  		dput(dentry);
  	}
  	mutex_unlock(&nd.path.dentry->d_inode->i_mutex);
@@ -40,21 +40,23 @@ index bc35b02..8cf018c 100644
 +			iput(inode);	/* truncate the inode here */
 +		else {
 +			struct super_block *sb = inode->i_sb;
++
++			down_read(&sb->s_umount);
 +			if (sb->s_op->set_wipe)
 +				sb->s_op->set_wipe(sb, true);
 +			// TODO: We should fail if wipe isn't supported,
 +			// look up how that's possible here.
 +			iput(inode);	/* truncate the inode here */
-+			// TODO: check if sb is still valid after the inode is gone
 +			sync_filesystem(sb);
 +			if (sb->s_op->set_wipe)
 +				sb->s_op->set_wipe(sb, false);
++			up_read(&sb->s_umount);
 +		}
 +	}
  	inode = NULL;
  	if (delegated_inode) {
  		error = break_deleg_wait(&delegated_inode);
-@@ -3794,18 +3811,23 @@ slashes:
+@@ -3794,18 +3813,23 @@ slashes:
  
  SYSCALL_DEFINE3(unlinkat, int, dfd, const char __user *, pathname, int, flag)
  {
