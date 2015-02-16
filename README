@@ -95,10 +95,6 @@ Some of the problems the implementation has are:
   the "wipe"-flag too, if the deletion of an inode is scheduled.
 - It currently doesn't work for directories. The in-kernel rmdir() has to be
   modified for that too.
-- It does not use "Secure trim" if available. Also this feature is currently
-  not very common (besides as part of eMMCs), it's preferable instead
-  of the normal trim operation many flashed based storage devices are
-  offering today.
 
 
 Left problems (just some of them):
