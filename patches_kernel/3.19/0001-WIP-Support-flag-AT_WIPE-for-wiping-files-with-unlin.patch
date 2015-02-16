@@ -1,4 +1,4 @@
-From c9566b5674c5fd9fd9e087030c83fb53290ffedc Mon Sep 17 00:00:00 2001
+From 704b2961484a1acb7501652df08e9de49e559ab0 Mon Sep 17 00:00:00 2001
 From: Alexander Holler <holler@ahsoftware.de>
 Date: Mon, 2 Feb 2015 18:05:09 +0100
 Subject: [PATCH 1/4] WIP: Support flag AT_WIPE for wiping files with
@@ -14,7 +14,7 @@ Signed-off-by: Alexander Holler <holler@ahsoftware.de>
  3 files changed, 30 insertions(+), 6 deletions(-)
 
 diff --git a/fs/namei.c b/fs/namei.c
-index bc35b02..0c390b9 100644
+index bc35b02..8cf018c 100644
 --- a/fs/namei.c
 +++ b/fs/namei.c
 @@ -3721,7 +3721,7 @@ EXPORT_SYMBOL(vfs_unlink);
@@ -61,10 +61,10 @@ index bc35b02..0c390b9 100644
 -	if ((flag & ~AT_REMOVEDIR) != 0)
 +	bool wipe = false;
 +
-+	if ((flag & ~(AT_REMOVEDIR | AT_WIPE)) != 0)
++	if (unlikely((flag & ~(AT_REMOVEDIR | AT_WIPE)) != 0))
  		return -EINVAL;
  
-+	if (flag & AT_WIPE)
++	if (unlikely(flag & AT_WIPE))
 +		wipe = true;
 +
  	if (flag & AT_REMOVEDIR)

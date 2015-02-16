@@ -1,4 +1,4 @@
-From 5d6ccdd27959a7f4bc28a8999c698cc6f32e7ea5 Mon Sep 17 00:00:00 2001
+From 1a1bb8914e70077a911591f78ba4ddaeac6afea3 Mon Sep 17 00:00:00 2001
 From: Alexander Holler <holler@ahsoftware.de>
 Date: Mon, 2 Feb 2015 18:05:11 +0100
 Subject: [PATCH 4/4] WIP: fs: ext4: support unlinkat() with flag AT_WIPE to
@@ -25,7 +25,7 @@ index c55a1fa..52cec69 100644
  
  static inline struct ext4_sb_info *EXT4_SB(struct super_block *sb)
 diff --git a/fs/ext4/mballoc.c b/fs/ext4/mballoc.c
-index dbfe15c..990e0fc 100644
+index dbfe15c..7cc2667 100644
 --- a/fs/ext4/mballoc.c
 +++ b/fs/ext4/mballoc.c
 @@ -2756,6 +2756,19 @@ static inline int ext4_issue_discard(struct super_block *sb,
@@ -61,7 +61,7 @@ index dbfe15c..990e0fc 100644
  		 entry->efd_count, entry->efd_group, entry);
  
 -	if (test_opt(sb, DISCARD)) {
-+	if (atomic_read(&sbi->wipe)) {
++	if (unlikely(atomic_read(&sbi->wipe))) {
 +		err = ext4_issue_wipe(sb, entry->efd_group,
 +					 entry->efd_start_cluster,
 +					 entry->efd_count);

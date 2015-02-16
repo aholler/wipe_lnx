@@ -1,4 +1,4 @@
-From 03e71e4666e5d4712a6942a9a3b2eeee5fc70d94 Mon Sep 17 00:00:00 2001
+From 91ff68069f2d9859068bab37e1f605e564f75170 Mon Sep 17 00:00:00 2001
 From: Alexander Holler <holler@ahsoftware.de>
 Date: Mon, 2 Feb 2015 18:05:10 +0100
 Subject: [PATCH 3/4] WIP: fs: fat: support unlinkat() with flag AT_WIPE to
@@ -24,7 +24,7 @@ index 64e295e..2a8a676 100644
  	struct nls_table *nls_disk;   /* Codepage used on disk */
  	struct nls_table *nls_io;     /* Charset used for input and display */
 diff --git a/fs/fat/fatent.c b/fs/fat/fatent.c
-index 260705c..ef3dece 100644
+index 260705c..807fbe1 100644
 --- a/fs/fat/fatent.c
 +++ b/fs/fat/fatent.c
 @@ -575,7 +575,22 @@ int fat_free_clusters(struct inode *inode, int cluster)
@@ -32,7 +32,7 @@ index 260705c..ef3dece 100644
  		}
  
 -		if (sbi->options.discard) {
-+		if (atomic_read(&sbi->wipe)) {
++		if (unlikely(atomic_read(&sbi->wipe))) {
 +			/*
 +			 * Wipe sectors we no longer care about, batching
 +			 * contiguous clusters into one request.
