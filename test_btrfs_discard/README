@@ -1,0 +1,11 @@
+This directory contains a small test for BTRFS to see if my approach to use
+the discard mechanism to wipe contents works with BTRFS.
+
+To conclude, it currently doesn't.
+
+The test is quiet simple. Instead of using discard, I've patched the kernel
+to overwrite blocks it otherwise would discard. Then I've mounted a
+BTRFS-partition with the mount option discard, deleted a file, and looked
+if the contents can still be found.
+
+Alexander Holler
