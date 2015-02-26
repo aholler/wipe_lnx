@@ -107,8 +107,10 @@ Left problems (just some of them):
   use swapoff(8) and some tool (e.g. dd) to wipe the used swap partition
   (if swap was on a partition at all).
 - The bad block managment of some drives might have moved or hidden parts
-  of the file to an unreachable part of the disk. You might have to destroy
-  the disk or similiar.
+  of the file to an unreachable part of the disk. Newer storage devices
+  might have a flag called SEC_BAD_BLK_MGMNT (ECSD register 134) to force
+  the storage to purge "good" bits on bad blocks. If not enabled you might
+  have to destroy the disk or similiar.
 - Flashed based devices with controllers might still contain parts of
   of the file in unused but not cleared blocks. Try fstrim --secure. Some SSDs
   do support a secure erase too. Look at hdparm(8).
