@@ -1,0 +1,94 @@
+From b7109fcb6d1af03714a4c15d421dc28967d45cc3 Mon Sep 17 00:00:00 2001
+From: Alexander Holler <holler@ahsoftware.de>
+Date: Mon, 2 Feb 2015 18:05:10 +0100
+Subject: [PATCH 3/4] WIP: fs: fat: support unlinkat() with flag AT_WIPE to
+ wipe files
+
+Signed-off-by: Alexander Holler <holler@ahsoftware.de>
+---
+ fs/fat/fat.h    |  1 +
+ fs/fat/fatent.c | 17 ++++++++++++++++-
+ fs/fat/inode.c  | 13 +++++++++++++
+ 3 files changed, 30 insertions(+), 1 deletion(-)
+
+diff --git a/fs/fat/fat.h b/fs/fat/fat.h
+index 64e295e..2a8a676 100644
+--- a/fs/fat/fat.h
++++ b/fs/fat/fat.h
+@@ -81,6 +81,7 @@ struct msdos_sb_info {
+ 	unsigned int prev_free;      /* previously allocated cluster number */
+ 	unsigned int free_clusters;  /* -1 if undefined */
+ 	unsigned int free_clus_valid; /* is free_clusters valid? */
++	atomic_t wipe;		     /* wipe blocks ? */
+ 	struct fat_mount_options options;
+ 	struct nls_table *nls_disk;   /* Codepage used on disk */
+ 	struct nls_table *nls_io;     /* Charset used for input and display */
+diff --git a/fs/fat/fatent.c b/fs/fat/fatent.c
+index 260705c..807fbe1 100644
+--- a/fs/fat/fatent.c
++++ b/fs/fat/fatent.c
+@@ -575,7 +575,22 @@ int fat_free_clusters(struct inode *inode, int cluster)
+ 			goto error;
+ 		}
+ 
+-		if (sbi->options.discard) {
++		if (unlikely(atomic_read(&sbi->wipe))) {
++			/*
++			 * Wipe sectors we no longer care about, batching
++			 * contiguous clusters into one request.
++			 */
++			if (cluster != fatent.entry + 1) {
++				int nr_clus = fatent.entry - first_cl + 1;
++
++				sb_issue_wipe(sb,
++					fat_clus_to_blknr(sbi, first_cl),
++					nr_clus * sbi->sec_per_clus,
++					GFP_NOFS);
++
++				first_cl = cluster;
++			}
++		} else if (sbi->options.discard) {
+ 			/*
+ 			 * Issue discard for the sectors we no longer
+ 			 * care about, batching contiguous clusters
+diff --git a/fs/fat/inode.c b/fs/fat/inode.c
+index 497c7c5..d3814a7 100644
+--- a/fs/fat/inode.c
++++ b/fs/fat/inode.c
+@@ -828,6 +828,17 @@ int fat_sync_inode(struct inode *inode)
+ 
+ EXPORT_SYMBOL_GPL(fat_sync_inode);
+ 
++static void fat_set_wipe(struct super_block *sb, bool wipe)
++{
++	struct msdos_sb_info *sbi = MSDOS_SB(sb);
++	// TODO: will overflow with a very large number of
++	// concurrent calls of unlinkat(AT_WIPE).
++	if (wipe)
++		atomic_inc(&sbi->wipe);
++	else
++		atomic_dec(&sbi->wipe);
++}
++
+ static int fat_show_options(struct seq_file *m, struct dentry *root);
+ static const struct super_operations fat_sops = {
+ 	.alloc_inode	= fat_alloc_inode,
+@@ -839,6 +850,7 @@ static const struct super_operations fat_sops = {
+ 	.remount_fs	= fat_remount,
+ 
+ 	.show_options	= fat_show_options,
++	.set_wipe	= fat_set_wipe,
+ };
+ 
+ static int fat_show_options(struct seq_file *m, struct dentry *root)
+@@ -1592,6 +1604,7 @@ int fat_fill_super(struct super_block *sb, void *data, int silent, int isvfat,
+ 	sbi->root_cluster = 0;
+ 	sbi->free_clusters = -1;	/* Don't know yet */
+ 	sbi->free_clus_valid = 0;
++	atomic_set(&sbi->wipe, 0);
+ 	sbi->prev_free = FAT_START_ENT;
+ 	sb->s_maxbytes = 0xffffffff;
+ 
+-- 
+2.0.5
+

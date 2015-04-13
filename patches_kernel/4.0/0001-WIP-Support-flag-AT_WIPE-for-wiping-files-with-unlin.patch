@@ -1,0 +1,112 @@
+From 492de6472a0850680b5c1c66d5c0dd3d91b5d8f4 Mon Sep 17 00:00:00 2001
+From: Alexander Holler <holler@ahsoftware.de>
+Date: Mon, 2 Feb 2015 18:05:09 +0100
+Subject: [PATCH 1/4] WIP: Support flag AT_WIPE for wiping files with
+ unlinkat()
+
+Someone might want to really delete a file.
+
+Signed-off-by: Alexander Holler <holler@ahsoftware.de>
+---
+ fs/namei.c                 | 36 ++++++++++++++++++++++++++++++------
+ include/linux/fs.h         |  1 +
+ include/uapi/linux/fcntl.h |  1 +
+ 3 files changed, 32 insertions(+), 6 deletions(-)
+
+diff --git a/fs/namei.c b/fs/namei.c
+index c83145a..b765a05 100644
+--- a/fs/namei.c
++++ b/fs/namei.c
+@@ -3758,7 +3758,7 @@ EXPORT_SYMBOL(vfs_unlink);
+  * writeout happening, and we don't want to prevent access to the directory
+  * while waiting on the I/O.
+  */
+-static long do_unlinkat(int dfd, const char __user *pathname)
++static long do_unlinkat(int dfd, const char __user *pathname, bool wipe)
+ {
+ 	int error;
+ 	struct filename *name;
+@@ -3800,8 +3800,27 @@ exit2:
+ 		dput(dentry);
+ 	}
+ 	mutex_unlock(&nd.path.dentry->d_inode->i_mutex);
+-	if (inode)
+-		iput(inode);	/* truncate the inode here */
++	if (inode) {
++		// TODO:
++		// if (inode is file and 's' flag is set)
++		// 	wipe = true;
++		if (!wipe)
++			iput(inode);	/* truncate the inode here */
++		else {
++			struct super_block *sb = inode->i_sb;
++
++			down_read(&sb->s_umount);
++			if (sb->s_op->set_wipe)
++				sb->s_op->set_wipe(sb, true);
++			// TODO: We should fail if wipe isn't supported,
++			// look up how that's possible here.
++			iput(inode);	/* truncate the inode here */
++			sync_filesystem(sb);
++			if (sb->s_op->set_wipe)
++				sb->s_op->set_wipe(sb, false);
++			up_read(&sb->s_umount);
++		}
++	}
+ 	inode = NULL;
+ 	if (delegated_inode) {
+ 		error = break_deleg_wait(&delegated_inode);
+@@ -3831,18 +3850,23 @@ slashes:
+ 
+ SYSCALL_DEFINE3(unlinkat, int, dfd, const char __user *, pathname, int, flag)
+ {
+-	if ((flag & ~AT_REMOVEDIR) != 0)
++	bool wipe = false;
++
++	if (unlikely((flag & ~(AT_REMOVEDIR | AT_WIPE)) != 0))
+ 		return -EINVAL;
+ 
++	if (unlikely(flag & AT_WIPE))
++		wipe = true;
++
+ 	if (flag & AT_REMOVEDIR)
+ 		return do_rmdir(dfd, pathname);
+ 
+-	return do_unlinkat(dfd, pathname);
++	return do_unlinkat(dfd, pathname, wipe);
+ }
+ 
+ SYSCALL_DEFINE1(unlink, const char __user *, pathname)
+ {
+-	return do_unlinkat(AT_FDCWD, pathname);
++	return do_unlinkat(AT_FDCWD, pathname, false);
+ }
+ 
+ int vfs_symlink(struct inode *dir, struct dentry *dentry, const char *oldname)
+diff --git a/include/linux/fs.h b/include/linux/fs.h
+index 52cc449..3828e67 100644
+--- a/include/linux/fs.h
++++ b/include/linux/fs.h
+@@ -1656,6 +1656,7 @@ struct super_operations {
+ 				  struct shrink_control *);
+ 	long (*free_cached_objects)(struct super_block *,
+ 				    struct shrink_control *);
++	void (*set_wipe) (struct super_block *, bool);
+ };
+ 
+ /*
+diff --git a/include/uapi/linux/fcntl.h b/include/uapi/linux/fcntl.h
+index beed138..e611b5b 100644
+--- a/include/uapi/linux/fcntl.h
++++ b/include/uapi/linux/fcntl.h
+@@ -62,6 +62,7 @@
+ #define AT_SYMLINK_FOLLOW	0x400   /* Follow symbolic links.  */
+ #define AT_NO_AUTOMOUNT		0x800	/* Suppress terminal automount traversal */
+ #define AT_EMPTY_PATH		0x1000	/* Allow empty relative pathname */
++#define AT_WIPE			0x8000	/* try to wipe used blocks */
+ 
+ 
+ #endif /* _UAPI_LINUX_FCNTL_H */
+-- 
+2.0.5
+
