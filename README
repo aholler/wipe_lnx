@@ -184,37 +184,6 @@ If you are interessted or you are bored:
   https://lkml.org/lkml/2015/2/2/495
 
 
-Name:
-
-The name is pretty obvious. But if you ask yourself if I had a second
-meaning in mind, yes I did.
-This wasn't my first contact with Linux kernel maintainers and kernel
-developers. And I've finally come to the conclusion that it has become
-impossible to discuss with them, like you are used to do with normal people,
-in order to change anything in Linux. It is most often a total waste of
-time which might end up in a total needless and unwanted public flame-war
-during which you even might have to defend yourself against kids suffering
-under the Dunning-Kruger effect. Entering an area full with bored
-Velociraptors which do like to hunt in groups (at least according to a well
-known movie) must feel the same.
-And keep in mind that very big companies with very large human and
-monetary resources are regularily failing in discussing with kernel
-maintainers too.
-One has to wonder where all these changes still are coming from which let
-Linux look tomorrow totally different than today (which is another problem
-it suffers from).
-To conclude, if you see the possibility to switch to another OS, or if you
-are deciding what OS you use for a new project, I suggest to keep away from
-Linux, if possible.
-Fortunately there are still alternatives around. Unfortunately these are
-becoming more and more seldom. To name some of them (in no special order):
-FreeBSD, OpenBSD, L4-kernels, mbed, ecos, FreeRTOS, ...
-Please don't get me wrong. I still like to use Linux, I like many of its
-features and I'm fully aware of all its advantages. But I learned to
-dislike how the community around it has changed and I'm a bit afraid
-that many good and usable alternatives are now dying because now everyone
-seems to prefer Linux for everything.
-
 BUGS:
 
 Countless. Please keep in mind that I've spend only a few hours. If you
