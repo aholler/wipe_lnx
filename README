@@ -186,5 +186,21 @@ If you are interessted or you are bored:
 
 BUGS:
 
-Countless. Please keep in mind that I've spend only a few hours. If you
-want or even need this at production level, please pay someone.
+Countless. Please keep in mind that I've spend only a few hours to write
+this proof of concept. If you want or even need this at production level,
+please pay someone.
+
+Here are some things which could be done to make this patch much better:
+
+- Return an error if unlinkat(..., AT_WIPE) is called on something else
+  than a regular file.
+- Return an error if unlinkat(..., AT_WIPE) is called on a file which is
+  currently in use (by another process). That will remove the need to
+  schedule wiping the file.
+- Return an error if unlinkat(..., AT_WIPE) is called on a file on a
+  filesystem which doesn't support wiping.
+- Return an error if unlinkat(..., AT_WIPE) is not called by root. That
+  should be optional (kernel config, mount option or similiar) and could
+  be enabled on systems where ordinary users should not be able to slow
+  down I/O by constantly wiping files (remember that the concept here
+  enables wiping globaly for a filesystem while a file is wiped).
